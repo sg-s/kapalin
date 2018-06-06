@@ -67,7 +67,7 @@ methods (Static)
 	end
 
 	% test
-	function test(repo)
+	function results = test(repo)
 
 		all_repos = dir('~/.kapalin');
 
@@ -119,28 +119,22 @@ methods (Static)
 			os_version = 'GNU_Linux';
 		end
 
-		matlab_version = version;
-
-
-		kapalin.printTestResult(n_fail, result_name)
-
-
-		% run all scripts in this repo starting with "test"
-
+		results.matlab_version = version;
+		results.os_version = os_version;
+		results.n_fail = n_fail;
+		results.n_pass = n_pass;
+		results.timestamp = datestr(now);
 
 	end
 
-
-	function printTestResult(n_fail, result_name)
-	end
 
 	function fileList = getAllFiles(dirName)
 		dirData = dir(dirName);      % Get the data for the current directory
 		dirIndex = [dirData.isdir];  % Find the index for directories
-		fileList = {dirData(~dirIndex).name}';  % Get a list of the files
+		fileList = {dirData(~dirIndex).name}';  
+
 		if ~isempty(fileList)
-			fileList = cellfun(@(x) fullfile(dirName,x),...  % Prepend path to files
-		                     fileList,'UniformOutput',false);
+			fileList = cellfun(@(x) fullfile(dirName,x),fileList,'UniformOutput',false);
 		end
 		subDirs = {dirData(dirIndex).name};  % Get a list of the subdirectories
 		validIndex = ~ismember(subDirs,{'.','..'});  % Find index of subdirectories
