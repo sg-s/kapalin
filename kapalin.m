@@ -3,17 +3,55 @@
 
 classdef kapalin
 
-properties
-
-end % end props
-
 methods
+
+
+
+
 
 end % end normal methods
 
 
 methods (Static)
 	
+
+	function kapalind(~,~)
+
+		% figure out all the repos to test
+		load([fileparts(which(mfilename)) filesep 'repos.mat'])
+		for i = 1:length(repos)
+			kapalin.test(repos{i});
+		end
+
+
+	end
+
+
+
+	% stop all timers 
+	function stop()
+		% find all timers and wipe kapalin timers
+		t = timerfind;
+		for i = 1:length(t)
+			if any(strfind(func2str(t(i).TimerFcn),'kapalin'))
+				stop(t(i))
+				delete(t(i))
+			end
+		end
+	end
+
+	
+	
+	
+	function startAsHost()
+
+		kapalin.stop()
+
+		daemon_handle = timer('TimerFcn',@kapalin.kapalind,'ExecutionMode','fixedDelay','TasksToExecute',Inf,'Period',600);
+		start(daemon_handle);
+
+	end % end startAshost
+
 
 	% initialize kapalin session
 	% clears all folders in .kapalin
@@ -47,11 +85,42 @@ methods (Static)
 	% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+	function addTest(repo_url)
+
+		if exist([fileparts(which(mfilename)) filesep 'repos.mat'],'file')
+			load([fileparts(which(mfilename)) filesep 'repos.mat'],'-mat')
+		else
+			repos = {};
+		end
+		repos = [repos; repo_url];
+		repos = unique(repos);
+		disp('The following repos will be tested...')
+		disp(repos)
+		save([fileparts(which(mfilename)) filesep 'repos.mat'],'repos')
+
+
+	end
+
+
 	% test a repo from a url
 	function results = test(repo_url)
 
 		kapalin.init();
 		[base_name, options] = kapalin.get(repo_url);
+
+		% check if we are within the preferred test time
+		ptt = datevec(options.preferred_test_time);
+		ptt(1:3) = 0;
+		t = datevec(now); t(1:3) = 0;
+		w = etime(ptt,t);
+
+		if abs(w/(60)) > options.test_time_margin
+			disp('Outside the requested time window to test, so doing nothing [ABORT]')
+			cd('/')
+			kapalin.init()
+			return
+		end
+
 
 		cd(base_name)
 
@@ -60,8 +129,18 @@ methods (Static)
 
 		kapalin.checkoutDevBranch(options);
 
+		is_even = kapalin.checkIfBranchesAreEven(options);
+
+		if is_even
+			disp('dev and master branches are even, so aborting')
+			return
+		end
+
 
 		repo_dir = ['~/.kapalin/' base_name];
+
+		repo_dir = [repo_dir filesep options.test_folder];
+
 		all_files = kapalin.getAllFiles(repo_dir);
 
 		n_pass = 0;
@@ -114,13 +193,8 @@ methods (Static)
 		results.n_pass = n_pass;
 		results.timestamp = datestr(now);
 
-		if n_fail > 0 
-			disp('At least one test failed. [ABORT]')
-			return
 
-		end
-
-		disp('All tests passed.')
+		disp('All tests complete.')
 
 		disp('Updating test badge...')
 		badge_url = kapalin.makeTestBadge(results);
@@ -138,19 +212,35 @@ methods (Static)
 
 		% now add this and commit
 		system('git add README.md')
-		system('git commit -m "kapalin::tests passed"')
 
-		disp('Will merge into stable branch')
-		[s,m]=system(['git checkout ' options.stable_branch]);
+		if n_fail > 0  
+			disp('At least one test failed. [ABORT]')
+			system('git commit -m "kapalin::tests failed"')
+
+		else
+			disp('All tests passed!.')
+			system('git commit -m "kapalin::tests passed"')
+
+			disp('Will merge into stable branch')
+			[s,m]=system(['git checkout ' options.stable_branch]);
 
 
-		[s,m] = system(['git merge -X theirs --no-edit -m "merged by kapalin" ' options.dev_branch]);
-		assert(s==0,'[FATAL] Error merging into stable branch.')
+			[s,m] = system(['git merge -X theirs --no-edit -m "merged by kapalin" ' options.dev_branch]);
+			assert(s==0,'[FATAL] Error merging into stable branch.')
+
+
+
+		end
 
 		disp('Will push to remote...')
 
 		[s,m] = system('git push');
 		assert(s == 0,['[FATAL] Error pushing . Error was: ' m])
+
+
+		cd('/')
+		kapalin.init()
+		
 
 	end % end test
 	% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -185,6 +275,28 @@ methods (Static)
 	% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	
+
+	function is_even = checkIfBranchesAreEven(options)
+		% compares the dev and master branches
+
+		disp('Comparing dev and master branches...')
+
+		[e,o] = system(['git log --left-right --graph --cherry-pick --oneline ' options.dev_branch '...' options.stable_branch  ' >> log.diff']);
+		assert(e ==0,'Something went wrong comparing branches')
+		
+		% now read log.diff
+
+		if length(strsplit(fileread('log.diff'),'\n','CollapseDelimiters',false)) == 1
+			is_even = true;
+		else
+			is_even = false;
+		end
+
+		delete('log.diff')
+
+
+	end
+
 
 	function badge_url = makeTestBadge(results)
 
