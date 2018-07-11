@@ -23,12 +23,7 @@ methods (Static)
 		t_start = [0 0 0 20 0 0]; % 8 PM
 		t_stop = [0 0 0 8 0 0]; % 8 AM
 
-		if etime(t,t_start) < 0
-			return
-		end
-
-
-		if etime(t_stop,t) < 0
+		if ~(etime(t,t_start)>0 | etime(t_stop,t)>0)
 			return
 		end
 
