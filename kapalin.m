@@ -127,15 +127,21 @@ methods (Static)
 		% check if we are within the preferred test time
 		ptt = datevec(options.preferred_test_time);
 		ptt(1:3) = 0;
-		t = datevec(now); t(1:3) = 0;
-		w = etime(ptt,t);
+		t_start = ptt;
+		t_stop = ptt;
+		t_start(4) = t_start(4) -1;
+		t_stop(4) = t_stop(4) + 1;
 
-		if abs(w/(60)) > options.test_time_margin
+		t = datevec(now); t(1:3) = 0;
+
+
+		if ~(etime(t,t_start)>0 | etime(t_stop,t)>0)
 			disp('Outside the requested time window to test, so doing nothing [ABORT]')
 			cd('/')
 			kapalin.init()
 			return
 		end
+
 
 
 		cd(base_name)
