@@ -15,6 +15,30 @@ end % end normal methods
 methods (Static)
 	
 
+	function self = kapalin()
+		% check if there are any timers
+
+		t = timerfind;
+		for i = 1:length(t)
+			if any(strfind(func2str(t(i).TimerFcn),'kapalin'))
+				disp('[INFO] kapalin is running in the background')
+			end
+		end
+
+		% which repos are we supposed to test? 
+		load([fileparts(which(mfilename)) filesep 'repos.mat'])
+		if length(repos) > 0
+			disp('[INFO] kapalin will test the following repos:')
+			disp('-------------------------------------')
+			for i = 1:length(repos)
+				disp(repos{i})
+			end
+		else
+			disp('[INFO] kapalin has no repo to test')
+		end
+
+	end
+
 	function kapalind(~,~)
 
 		t = datevec(now); t(1:3) = 0;
@@ -43,7 +67,7 @@ methods (Static)
 
 	% stop all timers 
 	function stop()
-		disp('Stopping all kapalin timers...')
+		disp('[INFO] Stopping all kapalin timers...')
 		% find all timers and wipe kapalin timers
 		t = timerfind;
 		for i = 1:length(t)
@@ -61,7 +85,7 @@ methods (Static)
 
 		kapalin.stop()
 
-		disp('Starting kapalin daemon')
+		disp('[INFO] Starting kapalin daemon')
 
 		daemon_handle = timer('TimerFcn',@kapalin.kapalind,'ExecutionMode','fixedDelay','TasksToExecute',Inf,'Period',600);
 		start(daemon_handle);
@@ -80,7 +104,7 @@ methods (Static)
 		cd('~')
 
 		% wipe all kapalin paths from the path
-		disp('Cleaning up path...')
+		disp('[INFO] Cleaning up path...')
 		p = path;
 		p = strsplit(p,pathsep);
 		for i = 1:length(p)
@@ -95,7 +119,7 @@ methods (Static)
 			rmdir('~/.kapalin','s')
 			mkdir('~/.kapalin')
 		end
-		disp('kapalin folder clean, ready to proceed.')
+		fprintf(' [DONE] \n')
 
 	end % end init
 	% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -110,7 +134,7 @@ methods (Static)
 		end
 		repos = [repos; repo_url];
 		repos = unique(repos);
-		disp('The following repos will be tested...')
+		disp('[INFO] The following repos will be tested...')
 		disp(repos)
 		save([fileparts(which(mfilename)) filesep 'repos.mat'],'repos')
 
@@ -119,42 +143,64 @@ methods (Static)
 
 
 	% test a repo from a url
-	function results = test(repo_url)
+	function results = test(repo_url, force)
+
+		if nargin == 0
+			disp('[INFO] No repo_url specified, will attempt to check repos.mat')
+			if exist([fileparts(which(mfilename)) filesep 'repos.mat'],'file')
+				load([fileparts(which(mfilename)) filesep 'repos.mat'],'-mat')
+			else
+				error('No repo_url specified, and no repos were saved to test. Nothing to do. ')
+			end
+			repo_url = repos{1};
+		end
+		
 
 		kapalin.init();
 		[base_name, options] = kapalin.get(repo_url);
 
 		% check if we are within the preferred test time
 		ptt = datevec(options.preferred_test_time);
+
+
 		ptt(1:3) = 0;
 		t_start = ptt;
 		t_stop = ptt;
-		t_start(4) = t_start(4) -1;
-		t_stop(4) = t_stop(4) + 1;
+		t_start(4) = t_start(4) - options.test_time_margin/60;
+		t_stop(4) = t_stop(4) + options.test_time_margin/60;
 
 		t = datevec(now); t(1:3) = 0;
 
-
-		if ~(etime(t,t_start)>0 | etime(t_stop,t)>0)
-			disp('Outside the requested time window to test, so doing nothing [ABORT]')
-			cd('/')
-			kapalin.init()
-			return
+		if nargin < 2
+			force = false;
 		end
 
+		if ~force
 
+			if (etime(t,t_start)>0 & etime(t_stop,t)>0)
+				disp('[INFO] Within allowed time window. Will proceed with test...')
 
+			else
+				disp('[ABORT] Outside the requested time window to test, so doing nothing')
+				cd('/')
+				kapalin.init()
+				return
+			end
+		end
+
+		
 		cd(base_name)
 
 
 		kapalin.setUpGitHooks();
+
 
 		kapalin.checkoutDevBranch(options);
 
 		is_even = kapalin.checkIfBranchesAreEven(options);
 
 		if is_even
-			disp('dev and master branches are even, so aborting')
+			disp('[ABORT] dev and master branches are even, so aborting')
 			return
 		end
 
@@ -216,9 +262,9 @@ methods (Static)
 		results.timestamp = datestr(now);
 
 
-		disp('All tests complete.')
+		disp('[INFO] All tests complete.')
 
-		disp('Updating test badge...')
+		disp('[INFO] Updating test badge...')
 		badge_url = kapalin.makeTestBadge(results);
 
 
@@ -236,14 +282,14 @@ methods (Static)
 		system('git add README.md')
 
 		if n_fail > 0  
-			disp('At least one test failed. [ABORT]')
+			disp('[ABORT] At least one test failed. ')
 			system('git commit -m "kapalin::tests failed"')
 
 		else
-			disp('All tests passed!.')
+			disp('[INFO] All tests passed!.')
 			system('git commit -m "kapalin::tests passed"')
 
-			disp('Will merge into stable branch')
+			disp('[INFO] Will merge into stable branch')
 			[s,m]=system(['git checkout ' options.stable_branch]);
 
 
@@ -254,6 +300,7 @@ methods (Static)
 
 		end
 
+
 		disp('Will push to remote...')
 
 		[s,m] = system('git push');
@@ -261,6 +308,7 @@ methods (Static)
 
 
 		cd('/')
+		disp('[INFO] All done, re-initialzing...')
 		kapalin.init()
 		
 
@@ -269,7 +317,7 @@ methods (Static)
 
 
 	function setUpGitHooks()
-		disp('Setting up git hooks...')
+		disp('[INFO] Setting up git hooks...')
 		if exist([pwd filesep 'git-hooks']) == 7
 			disp('git-hooks found!')
 		else
@@ -286,7 +334,7 @@ methods (Static)
 			end
 			copyfile([pwd filesep 'git-hooks' filesep allfiles(i).name],'.git/hooks/')
 			% make executable 
-			disp(['Enabling hook::' allfiles(i).name])
+			disp(['[INFO] Enabling hook::' allfiles(i).name])
 			[s,m] = system(['chmod a+x .git/hooks/' allfiles(i).name]);
 			assert(s == 0, ['Could not change permissions on git hook, error was :  ' m])
 
@@ -301,7 +349,7 @@ methods (Static)
 	function is_even = checkIfBranchesAreEven(options)
 		% compares the dev and master branches
 
-		disp('Comparing dev and master branches...')
+		disp('[INFO] Comparing dev and master branches...')
 
 		[e,o] = system(['git log --left-right --graph --cherry-pick --oneline ' options.dev_branch '...' options.stable_branch  ' >> log.diff']);
 		assert(e ==0,'Something went wrong comparing branches')
@@ -369,7 +417,7 @@ methods (Static)
 
 	function checkoutDevBranch(options)
 
-		disp('Checking out dev branch...')
+		disp('[INFO] Checking out dev branch...')
 
 		% first, we need to figure out where it is
 		[s,m] = system('git branch -a');
@@ -386,7 +434,7 @@ methods (Static)
 		end
 		assert(~isempty(remote_branch),'Could not determine remote branch corresponding to dev_branch')
 		[s,m] = system(['git checkout -b ' options.dev_branch ' ' remote_branch]);
-		assert(s == 0,['Failed to switch to dev branch, error was :' m])
+		assert(s == 0,['[FATAL] Failed to switch to dev branch, error was :' m])
 
 
 	end % end checkoutDevBranch
@@ -406,7 +454,7 @@ methods (Static)
 	catch
 	end
 	mkdir(base_name)
-	disp('Attempting to download repo...')
+	disp('[INFO] Attempting to download repo...')
 	[s,m]=system(['git clone ' url]);
 	if s > 0
 		disp('FAILED. Will try Github...')
@@ -414,10 +462,10 @@ methods (Static)
 		url = ['git@github.com:' url '.git'];
 		[s,m] = system(['git clone ' url]);
 	end
-	assert(s == 0,['Failed to get this repo. The error was: ' m])
+	assert(s == 0,['[FATAL] Failed to get this repo. The error was: ' m])
 
 	% add all paths to matlab path
-	disp('Adding repo to path...')
+	disp('[INFO] Adding repo to path...')
 	all_paths = strsplit(genpath(['~/.kapalin/' base_name]),pathsep);
 	for i = 1:length(all_paths)
 		if any(strfind(all_paths{i},'.git'))
@@ -428,7 +476,7 @@ methods (Static)
 	savepath
 
 	disp('DONE!')
-	disp('Inspecting repo...')
+	disp('[INFO] Inspecting repo...')
 
 	if exist(['~/.kapalin/' base_name '/kapalin.json'])~=2
 		disp('No kapalin.json found, assuming that this is a dependency')
@@ -437,7 +485,7 @@ methods (Static)
 
 	options = jsondecode(fileread(['~/.kapalin/' base_name '/kapalin.json']));
 
-	disp('Installing dependencies...')
+	disp('[INFO] Installing dependencies...')
 
 	for i = 1:length(options.deps)
 		kapalin.get(options.deps{i});
