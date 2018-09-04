@@ -76,6 +76,13 @@ methods (Static)
 				delete(t(i))
 			end
 		end
+
+		% restore path to as the user wanted it
+		disp('[INFO] Restoring userpath')
+		p = kapalin_user_path;
+		addpath(p);
+		savepath;
+
 	end
 
 	
@@ -103,16 +110,22 @@ methods (Static)
 
 		cd('~')
 
-		% wipe all kapalin paths from the path
-		disp('[INFO] Cleaning up path...')
-		p = path;
-		p = strsplit(p,pathsep);
-		for i = 1:length(p)
-			if any(strfind(p{i},'.kapalin'))
-				rmpath(p{i})
-			end
-		end
 
+		% save user's custom path, and reset
+		% everything to MATLAB factory default
+		% + kapalin
+
+		kapalin_path = fileparts(which(mfilename));
+
+		s = savepath([kapalin_path filesep 'kapalin_user_path.m']);
+
+		assert(s==0,'Error saving path, will not continue');
+
+		restoredefaultpath
+		addpath(kapalin_path)
+		savepath;
+
+		% make the kapalin folders if need be
 		if ~exist('~/.kapalin','dir')
 			mkdir('~/.kapalin')
 		else

@@ -1,6 +1,47 @@
 # kapalin
 
-automated build system and testing framework for MATLAB
+automated build system and testing framework for MATLAB, with a envvironment manager
+
+
+## Using the environment manager
+
+This package contains a class called `env`, which is a fully-featured environment manager for MATLAB (like `conda`, or `virtualenv`)
+
+### Save your current environment for use later
+
+```matlab
+env.save('default')
+```
+
+### Create a new, empty environment 
+
+```matlab
+env.create('name','testing')
+% You can now install whatever you want
+% here without affecting your primary
+% environment
+```
+
+### Switch to that environment 
+
+```matlab
+env.activate('testing')
+```
+
+### List all available environments
+
+```matlab
+env.list
+```
+
+which will show
+
+```matlab
+*testing
+default
+```
+
+Note that the asterix indicates the currently active environment. 
 
 ## Assumptions
 
