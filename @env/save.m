@@ -9,3 +9,5 @@ kapalin_path = fileparts(fileparts(which('env')));
 s = savepath([kapalin_path filesep 'env_' name '.m']);
 
 assert(s==0,'Error saving path, will not continue');
+
+save([kapalin_path, filesep, 'current_env.mat'],'name')

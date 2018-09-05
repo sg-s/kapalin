@@ -8,10 +8,10 @@ end % methods
 
 methods (Static)
 
-	create(varargin);
+	create(name);
 	save(name);
 	activate(name);
-	list;
+	varargout = list;
 
 
 end % methods (Static)
