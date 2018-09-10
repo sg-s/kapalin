@@ -83,7 +83,14 @@ t = matlab.addons.toolbox.installToolbox(toolbox_name);
 
 disp('[kapalin::testing] Testing the binary...')
 eval(['[passed, total] = ' t.Name '.run_all_tests;'])
-assert(passed == total,'Some tests failed; aborting')
+try
+	assert(passed == total,'Some tests failed; aborting')
+catch
+	matlab.addons.toolbox.uninstallToolbox(t);
+	cd(original_dir)
+	env.activate(original_env)
+	return
+end
 
 
 disp('[kapalin::testing] Updating binary...')
