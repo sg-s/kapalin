@@ -2,7 +2,11 @@
 % test a repo from a url
 function results = test(repo_dir)
 
+toolbox_name = '';
 original_dir = pwd;
+
+
+
 % verify that we are currently in an environment 
 assert(env.list,'You need to first save your current environment (use env.save(''something'')')
 [~,original_env] = env.list;
@@ -34,13 +38,17 @@ end
 % first -- check if we actually have to do anything, 
 % or if the binary is already OK
 
-load('last_build.kapalin','-mat')
-[e,git_hash] = system('git rev-parse HEAD');
+if exist('last_build.kapalin','file')
+	load('last_build.kapalin','-mat')
+	[e,git_hash] = system('git rev-parse HEAD');
 
-assert(e == 0,'Error reading git hash')
-if strcmp(strtrim(git_hash),last_build)
-	disp('[kapalin::testing] Nothing to do as most recent built is from latest commit')
-	return
+	assert(e == 0,'Error reading git hash')
+	if strcmp(strtrim(git_hash),last_build)
+		disp('[kapalin::testing] Nothing to do as most recent built is from latest commit')
+		return
+	end
+else
+	disp('[kapalin::testing] last_build.kapalin not found, assuming that we need to test.')
 end
 
 
@@ -63,13 +71,18 @@ cd(repo_dir)
 prj_name = dir('*.prj');
 assert(length(prj_name) == 1, 'Could not determine project name')
 
-load('build_number'); 
+
+load('build_number','build_number'); 
+
+
 matlab.addons.toolbox.toolboxVersion(prj_name.name,['1.0.0.' mat2str(build_number)]); 
 
 toolbox_name = strrep(prj_name.name,'prj','mltbx');
 
 
+disp('[kapalin] Making toolbox in ~/.kapalin/')
 matlab.addons.toolbox.packageToolbox(prj_name.name,[home_dir '/.kapalin/' toolbox_name])
+
 
 
 
@@ -81,14 +94,16 @@ disp('[kapalin::testing] Installing the binary...')
 cd('~/.kapalin/')
 t = matlab.addons.toolbox.installToolbox(toolbox_name);
 
+
+finishup = onCleanup(@() myCleanupFun(t, original_dir, original_env));
+
+
 disp('[kapalin::testing] Testing the binary...')
 eval(['[passed, total] = ' t.Name '.run_all_tests;'])
 try
 	assert(passed == total,'Some tests failed; aborting')
 catch
-	matlab.addons.toolbox.uninstallToolbox(t);
-	cd(original_dir)
-	env.activate(original_env)
+	myCleanupFun(t, original_dir, original_env)
 	return
 end
 
@@ -153,10 +168,8 @@ last_build = strtrim(git_hash);
 save('last_build.kapalin','last_build')
 
 disp('[kapalin::testing] All done. Returning to original state.')
-matlab.addons.toolbox.uninstallToolbox(t);
-cd(original_dir)
-env.activate(original_env)
-% uninstall the toolbox
+myCleanupFun(t, original_dir, original_env)
+
 
 return
 
@@ -200,4 +213,18 @@ disp('Will push to remote...')
 
 [s,m] = system('git push');
 assert(s == 0,['[FATAL] Error pushing . Error was: ' m])
+
+
+end
+		
+function myCleanupFun(toolbox_name, original_dir, original_env)
+	disp('Cleaning up...')
+	matlab.addons.toolbox.uninstallToolbox(toolbox_name);
+	cd(original_dir)
+	env.activate(original_env)
+
+
+end
+
+
 
