@@ -15,32 +15,37 @@ end % end normal methods
 methods (Static)
 	
 	add(url);
-	results = test(url);
+	results = test(varargin);
 	kapalind(~,~);
 
 	uploadToolbox2Github(repo_dir);
 
+	testUsingVM(toolbox_name,k_options)
+
+	init()
+
+	addVM(vm_name);
+
+	start()
+	stop()
+
 
 	function self = kapalin()
-		% check if there are any timers
 
-		t = timerfind;
-		for i = 1:length(t)
-			if any(strfind(func2str(t(i).TimerFcn),'kapalin'))
-				disp('[INFO] kapalin is running in the background')
-			end
+
+
+		kapalin.init()
+
+		options = getpref('kapalin');
+		disp(['kapalin running in mode: ' options.mode])
+		disp(['path_to_vm_share: ' options.path_to_vm_share])
+
+		if strcmp(options.mode,'VM')
+			return
 		end
-
-		% which repos are we supposed to test? 
-		load([fileparts(which(mfilename)) filesep 'repos.mat'])
-		if length(repos) > 0
-			disp('[INFO] kapalin will test the following repos:')
-			disp('-------------------------------------')
-			for i = 1:length(repos)
-				disp(repos{i})
-			end
-		else
-			disp('[INFO] kapalin has no repo to test')
+		disp('The following VMs are configured:')
+		for i = 1:length(options.vm_names)
+			disp(options.vm_names{i})
 		end
 
 	end

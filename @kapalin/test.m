@@ -1,6 +1,44 @@
 
 % test a repo from a url
-function results = test(repo_dir)
+function results = test(varargin)
+
+kapalin.init()
+
+
+% options and defaults
+options.repo_dir = '';
+options.upload_binary = false;
+options.force_test = false;
+
+if nargout && ~nargin 
+	varargout{1} = options;
+    return
+end
+
+% validate and accept options
+if iseven(length(varargin))
+	for ii = 1:2:length(varargin)-1
+	temp = varargin{ii};
+    if ischar(temp)
+    	if ~any(find(strcmp(temp,fieldnames(options))))
+    		disp(['Unknown option: ' temp])
+    		disp('The allowed options are:')
+    		disp(fieldnames(options))
+    		error('UNKNOWN OPTION')
+    	else
+    		options.(temp) = varargin{ii+1};
+    	end
+    end
+end
+elseif isstruct(varargin{1})
+	% should be OK...
+	options = varargin{1};
+else
+	error('Inputs need to be name value pairs')
+end
+
+repo_dir = options.repo_dir;
+force_test = options.force_test;
 
 toolbox_name = '';
 original_dir = pwd;
@@ -45,9 +83,11 @@ if exist('last_build.kapalin','file')
 	last_build = strtrim(last_build);
 
 	assert(e == 0,'Error reading git hash')
-	if strcmp(git_hash,last_build)
+	if strcmp(git_hash,last_build) && ~force_test
 		disp('[kapalin::testing] Nothing to do as most recent built is from latest commit')
-		kapalin.uploadToolbox2Github(repo_dir);
+		if options.upload_binary
+			kapalin.uploadToolbox2Github(repo_dir);
+		end
 		return
 	else
 		disp('[kapalin::testing] last_build does not match current hash')
@@ -59,12 +99,12 @@ end
 
 
 disp('[kapalin::testing] Reading JSON options...')
-options = jsondecode(fileread('kapalin.json'));
+k_options = jsondecode(fileread('kapalin.json'));
 
 disp('[kapalin::testing] Checking out master for all deps...')
-for i = 1:length(options.deps)
-	assert(logical(searchPath(options.deps{i})),'Could not locate dependency')
-	[~,go_here] = searchPath(options.deps{i});
+for i = 1:length(k_options.deps)
+	assert(logical(searchPath(k_options.deps{i})),'Could not locate dependency')
+	[~,go_here] = searchPath(k_options.deps{i});
 	cd(go_here)
 	[e,o] = system('git checkout master');
 	assert(e == 0,'Error checking out master')
@@ -89,8 +129,6 @@ disp('[kapalin] Making toolbox in ~/.kapalin/')
 matlab.addons.toolbox.packageToolbox(prj_name.name,[home_dir '/.kapalin/' toolbox_name])
 
 
-
-
 disp('[kapalin::testing] Switching to a new environment.')
 env.create('kapalin_testing_env')
 
@@ -101,6 +139,7 @@ t = matlab.addons.toolbox.installToolbox(toolbox_name);
 
 
 disp('[kapalin::testing] Testing the binary...')
+
 eval(['[passed, total] = ' t.Name '.run_all_tests;'])
 try
 	assert(passed == total,'Some tests failed; aborting')
@@ -110,11 +149,13 @@ catch
 end
 
 
+% ask the VMs to test this too
+kapalin.testUsingVM(toolbox_name,k_options);
+
+
 disp('[kapalin::testing] Updating binary...')
 movefile(['~/.kapalin/' toolbox_name],repo_dir)
 
-
-disp('[kapalin::testing] Updating README with test results...')
 
 if ismac
 	[~,m] = system('sw_vers | grep ProductVersion');
@@ -135,6 +176,13 @@ results.timestamp = datestr(now);
 % make a note of this git commit and link to this build
 last_build = git_hash;
 save([repo_dir filesep 'last_build.kapalin'],'last_build')
+
+
+if options.upload_binary
+	kapalin.uploadToolbox2Github(repo_dir);
+end
+
+
 
 
 disp('[kapalin::testing] All done. Returning to original state.')

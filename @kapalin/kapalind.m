@@ -1,22 +1,63 @@
+% what the daemon does is simple:
+% if it's running a VM
+% it looks at the vm_share folder,
+% and tests and toolbox in it
+% and spits out a report 
+
 function kapalind(~,~)
 
-t = datevec(now); t(1:3) = 0;
-
-% kapalin should only run after office hours
-t_start = [0 0 0 20 0 0]; % 8 PM
-t_stop = [0 0 0 8 0 0]; % 8 AM
-
-if ~(etime(t,t_start)>0 | etime(t_stop,t)>0)
+if strcmp(getpref('kapalin','mode'),'VM')
+else
 	return
 end
 
-disp('kapalin is in allowed timezone, initiating...')
-disp(datestr(now))
+path_to_share = getpref('kapalin','path_to_vm_share');
 
-% figure out all the repos to test
-load([fileparts(which(mfilename)) filesep 'repos.mat'])
-for i = 1:length(repos)
-	kapalin.test(repos{i});
+try
+	allfiles = dir([path_to_share filesep '*.mltbx']);
+catch
+	% this probably means there are no toolboxes
+	return
+end
+
+if length(allfiles) < 1
+	return
+end
+
+assert(length(allfiles) == 1,'Expected exactly one toolbox')
+
+
+disp('[kapalin::testing] Switching to a new environment.')
+env.create('kapalin_testing_env')
+
+t = matlab.addons.toolbox.installToolbox([allfiles.folder filesep allfiles.name]);
+
+if ismac
+	[~,m] = system('sw_vers | grep ProductVersion');
+	m = strtrim(strrep(m,'ProductVersion:',''));
+	os_version = ['macOS_' m];
+else
+	% assume GNU/Linux
+	os_version = 'GNU_Linux';
 end
 
 
+
+disp('[kapalin::testing] Testing the binary...')
+
+eval(['[passed, total] = ' t.Name '.run_all_tests;'])
+
+
+
+results.matlab_version = version;
+results.os_version = os_version;
+results.n_total = total;
+results.n_pass = passed;
+results.timestamp = datestr(now);
+save([allfiles.folder filesep 'vm_test_results.mat'],'results')
+
+% uninstall the toolbox
+matlab.addons.toolbox.uninstallToolbox(t);
+
+% delete the toolbox
+delete([allfiles.folder filesep allfiles.name])

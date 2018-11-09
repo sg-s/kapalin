@@ -1,38 +1,36 @@
 
 
 
-
-% initialize kapalin session
-% clears all folders in .kapalin
-% nukes all kapalin files from the path 
-
 function init()
 
-assert(~ispc,'kapalin cannot run on a windows computer')
 
-cd('~')
+try getpref('kapalin','path_to_vm_share');
+catch
+	str = input('Enter the path to the VM share:  \n','s');
+	setpref('kapalin','path_to_vm_share',str)
 
-
-% save user's custom path, and reset
-% everything to MATLAB factory default
-% + kapalin
-
-kapalin_path = fileparts(which(mfilename));
-
-s = savepath([kapalin_path filesep 'kapalin_user_path.m']);
-
-assert(s==0,'Error saving path, will not continue');
-
-restoredefaultpath
-addpath(kapalin_path)
-savepath;
-
-% make the kapalin folders if need be
-if ~exist('~/.kapalin','dir')
-	mkdir('~/.kapalin')
-else
-	rmdir('~/.kapalin','s')
-	mkdir('~/.kapalin')
 end
-fprintf(' [DONE] \n')
 
+try getpref('kapalin','mode');
+catch
+	str = input('Is kapalin running within a VM (y/n)?  \n','s');
+	switch str 
+	case 'y'
+		disp('Setting kapalin to VM mode')
+		setpref('kapalin','mode','VM')
+	otherwise
+		disp('Setting kapalin to default mode')
+		setpref('kapalin','mode','default')
+	end
+end
+
+
+if strcmp(getpref('kapalin','mode'),'default')
+
+	try getpref('kapalin','vm_names');
+	catch
+		kapalin.addVM()
+
+	end
+
+end
