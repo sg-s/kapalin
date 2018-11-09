@@ -43,12 +43,13 @@ default
 
 Note that the asterix indicates the currently active environment. 
 
-## Assumptions
 
-1. Your codebase is in MATLAB
-2. Your code is hosted on git repositories online 
-3. Your testing machine runs MATLAB
-4. Your testing machine can connect to the internet, and can read and write to the .git repository that it is testing 
-5. The repo being tested has a "master" branch and a "dev" branch (but they can be called whatever they want)
-6. Your repo has a readme file called "README.md" on the root 
-7. That the 2nd line of your README is blank/can be overwritten by status badges
+## Using kapalin
+
+`kapalin` assumes the following things:
+
+1. Your code is hosted on github
+2. You are writing MATLAB code, and your ultimately want to distribute a MATLAB toolbox
+3. You will host the toolbox files (`*.mltbx`) on Github as a release.
+4. You have installed [github-release](https://github.com/aktau/github-release) on the computer you are testing on
+

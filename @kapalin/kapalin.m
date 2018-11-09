@@ -15,10 +15,11 @@ end % end normal methods
 methods (Static)
 	
 	add(url);
-	test(url);
-	[base_name, options] = get(url);
+	results = test(url);
 	kapalind(~,~);
-	badge_url = makeTestBadge(results);
+
+	uploadToolbox2Github(repo_dir);
+
 
 	function self = kapalin()
 		% check if there are any timers
@@ -43,6 +44,8 @@ methods (Static)
 		end
 
 	end
+
+
 
 
 
