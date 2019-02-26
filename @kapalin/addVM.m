@@ -8,10 +8,10 @@ end
 
 
 try getpref('kapalin','vm_names');
-		vm_names = getpref('kapalin','vm_names');
-		vm_names = [vm_names; vm_name];
-		setpref('kapalin','vm_names',vm_names);
+	vm_names = getpref('kapalin','vm_names');
+	vm_names = [vm_names; vm_name];
+	setpref('kapalin','vm_names',vm_names);
 
-	catch
-		setpref('kapalin','vm_names',{vm_name});
-	end
+catch
+	setpref('kapalin','vm_names',{vm_name});
+end

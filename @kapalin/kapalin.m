@@ -22,6 +22,8 @@ methods (Static)
 
 	testUsingVM(toolbox_name,k_options)
 
+	configureVBoxManagePath()
+
 	init()
 
 	addVM(vm_name);

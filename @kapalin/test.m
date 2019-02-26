@@ -9,6 +9,7 @@ kapalin.init()
 options.repo_dir = '';
 options.upload_binary = false;
 options.force_test = false;
+options.test_vms = false;
 
 if nargout && ~nargin 
 	varargout{1} = options;
@@ -85,12 +86,23 @@ if exist('last_build.kapalin','file')
 	assert(e == 0,'Error reading git hash')
 	if strcmp(git_hash,last_build) && ~force_test
 		disp('[kapalin::testing] Nothing to do as most recent built is from latest commit')
+
+
+		prj_name = dir([repo_dir filesep '*.prj']);
+		toolbox_name = strrep(prj_name.name,'prj','mltbx');
+		if options.test_vms
+			kapalin.testUsingVM([repo_dir filesep toolbox_name]);
+		end
+
 		if options.upload_binary
 			kapalin.uploadToolbox2Github(repo_dir);
 		end
+
 		return
 	else
 		disp('[kapalin::testing] last_build does not match current hash')
+		disp(['last_build:' last_build])
+		disp(['current_hash:' git_hash])
 	end
 else
 	disp('[kapalin::testing] last_build.kapalin not found, assuming that we need to test.')
@@ -103,7 +115,7 @@ k_options = jsondecode(fileread('kapalin.json'));
 
 disp('[kapalin::testing] Checking out master for all deps...')
 for i = 1:length(k_options.deps)
-	assert(logical(searchPath(k_options.deps{i})),'Could not locate dependency')
+	assert(logical(searchPath(k_options.deps{i})),['Could not locate dependency: ' k_options.deps{i}])
 	[~,go_here] = searchPath(k_options.deps{i});
 	cd(go_here)
 	[e,o] = system('git checkout master');
@@ -116,11 +128,6 @@ cd(repo_dir)
 prj_name = dir('*.prj');
 assert(length(prj_name) == 1, 'Could not determine project name')
 
-
-load('build_number','build_number'); 
-
-
-matlab.addons.toolbox.toolboxVersion(prj_name.name,['1.0.0.' mat2str(build_number)]); 
 
 toolbox_name = strrep(prj_name.name,'prj','mltbx');
 
@@ -140,21 +147,32 @@ t = matlab.addons.toolbox.installToolbox(toolbox_name);
 
 disp('[kapalin::testing] Testing the binary...')
 
+
 eval(['[passed, total] = ' t.Name '.run_all_tests;'])
-try
-	assert(passed == total,'Some tests failed; aborting')
-catch
+
+
+if passed < total
+	disp('Some tests failed; aborting.')
 	myCleanupFun(t, original_dir, original_env)
 	return
+
 end
 
-
-% ask the VMs to test this too
-kapalin.testUsingVM(toolbox_name,k_options);
-
+% make a note of this git commit and link to this build
+last_build = git_hash;
+save([repo_dir filesep 'last_build.kapalin'],'last_build')
 
 disp('[kapalin::testing] Updating binary...')
 movefile(['~/.kapalin/' toolbox_name],repo_dir)
+
+
+% ask the VMs to test this too
+if options.test_vms
+	kapalin.testUsingVM(toolbox_name);
+end
+
+
+
 
 
 if ismac
@@ -173,13 +191,10 @@ results.n_pass = passed;
 results.timestamp = datestr(now);
 
 
-% make a note of this git commit and link to this build
-last_build = git_hash;
-save([repo_dir filesep 'last_build.kapalin'],'last_build')
-
-
 if options.upload_binary
 	kapalin.uploadToolbox2Github(repo_dir);
+else
+	disp('Not uploading binaries to github...')
 end
 
 

@@ -27,6 +27,20 @@ end
 
 if strcmp(getpref('kapalin','mode'),'default')
 
+	% running as host
+
+	try getpref('kapalin','vboxmanage_path');
+
+
+		vboxmanage_path = getpref('kapalin','vboxmanage_path');
+
+	catch
+		
+		kapalin.configureVBoxManagePath()
+
+	end
+
+
 	try getpref('kapalin','vm_names');
 	catch
 		kapalin.addVM()
