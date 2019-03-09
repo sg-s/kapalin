@@ -17,7 +17,7 @@ if nargout && ~nargin
 end
 
 % validate and accept options
-if iseven(length(varargin))
+if (length(varargin))/2 == floor((length(varargin))/2) % even
 	for ii = 1:2:length(varargin)-1
 	temp = varargin{ii};
     if ischar(temp)
