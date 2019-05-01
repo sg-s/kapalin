@@ -1,0 +1,9 @@
+{
+    "env.activate":
+    {
+        "inputs":
+        [
+            {"name":"name", "kind":"required", "type":"choices=env.list()"}
+        ]
+    }
+}

@@ -13,17 +13,17 @@ end
 load([kapalin_path, filesep, 'current_env.mat'],'name')
 
 
-if nargout == 1
-	varargout{1} = true;
-	return
-end
-
 
 allfiles = dir([kapalin_path filesep 'env_*.m']);
+env_names = {};
 for i = 1:length(allfiles)
 
-	if nargout == 2 & strcmp(name,allfiles(i).name(5:end-2))
-		varargout{2} = allfiles(i).name(5:end-2);
+	if nargout == 1 
+		 env_names{end+1} = allfiles(i).name(5:end-2);
+	end
+
+	if nargout == 2 && strcmp(name,allfiles(i).name(5:end-2))
+		 varargout{2} = allfiles(i).name(5:end-2);
 	end
 
 	if ~nargout
@@ -35,6 +35,15 @@ for i = 1:length(allfiles)
 	end
 	
 end
-fprintf('\n')
+
+
+if nargout == 1
+	varargout{1} = env_names;
+end
+
+if ~nargout
+	fprintf('\n')
+end
+
 
 

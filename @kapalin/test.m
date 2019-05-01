@@ -46,7 +46,7 @@ original_dir = pwd;
 t = '';
 
 % verify that we are currently in an environment 
-assert(env.list,'You need to first save your current environment (use env.save(''something'')')
+assert(~isempty(env.list),'You need to first save your current environment (use env.save(''something'')')
 [~,original_env] = env.list;
 assert(~ispc,'kapalin.test() cannot run on Windows')
 
