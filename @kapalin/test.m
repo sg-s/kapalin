@@ -50,8 +50,26 @@ assert(~isempty(env.list),'You need to first save your current environment (use 
 [~,original_env] = env.list;
 assert(~ispc,'kapalin.test() cannot run on Windows')
 
+
+% configure what to do if something goes wrong
 finishup = onCleanup(@() myCleanupFun(t, original_dir, original_env));
 
+
+prj_name = dir([repo_dir filesep '*.prj']);
+assert(length(prj_name) == 1, 'Could not determine project name')
+
+
+% modify the prj file to reflect today's date
+prj_text = fileread(prj_name.name);
+old_str = prj_text(strfind(prj_text,'<param.version>'):strfind(prj_text,'</param.version>'));
+N = datevec(now);
+N = [mat2str(N(1)-2000) '.' mat2str(N(2)) '.' mat2str(N(3))];
+new_str = ['<param.version>' N '<'];
+prj_text = strrep(prj_text,old_str,new_str);
+
+f = fopen([prj_name.folder filesep prj_name.name],'w');
+fprintf(f,prj_text);
+fclose(f)
 
 cd('~')
 home_dir = pwd;
@@ -125,8 +143,6 @@ end
 disp('[kapalin::testing] Making the binary...')
 cd(repo_dir)
 
-prj_name = dir('*.prj');
-assert(length(prj_name) == 1, 'Could not determine project name')
 
 
 toolbox_name = strrep(prj_name.name,'prj','mltbx');
