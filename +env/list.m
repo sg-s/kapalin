@@ -1,21 +1,21 @@
 function varargout = list()
 
-kapalin_path = fileparts(fileparts(which('env')));
+p = getpref('kapalinenv');
 
-
-if exist([kapalin_path, filesep, 'current_env.mat'],'file') ~= 2
-	disp('No environments saved')
-	if nargout == 1
-		varargout{1} = false;
-	end
+if isempty(p)
+	disp('No environments configured.')
 	return
 end
-load([kapalin_path, filesep, 'current_env.mat'],'name')
 
 
 
+
+kapalin_path = (fileparts(which('env.save')));
 allfiles = dir([kapalin_path filesep 'env_*.m']);
 env_names = {};
+
+current_env = getpref('kapalinenv','current_env');
+
 for i = 1:length(allfiles)
 
 	if nargout == 1 
@@ -28,7 +28,7 @@ for i = 1:length(allfiles)
 
 	if ~nargout
 		fprintf('\n ')
-		if strcmp(name,allfiles(i).name(5:end-2))
+		if strcmp(current_env,allfiles(i).name(5:end-2))
 			fprintf('*')
 		end
 		fprintf(allfiles(i).name(5:end-2))

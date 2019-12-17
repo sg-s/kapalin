@@ -5,9 +5,10 @@ name = strrep(name,'.','');
 name = strrep(name,'/','');
 name = strrep(name,'\','');
 
-kapalin_path = fileparts(fileparts(which('env')));
+kapalin_path = (fileparts(which('env.save')));
+
 s = savepath([kapalin_path filesep 'env_' name '.m']);
 
 assert(s==0,'Error saving path, will not continue');
 
-save([kapalin_path, filesep, 'current_env.mat'],'name')
+setpref('kapalinenv','current_env',name)

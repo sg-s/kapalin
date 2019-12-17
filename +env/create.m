@@ -5,7 +5,7 @@ function create(name)
 assert(~isempty(name),'No name specified')
 
 % in any case, start from a brand new factory install
-kapalin_path = fileparts(fileparts(which('env')));
+kapalin_path = fileparts(fileparts(which('env.save')));
 restoredefaultpath
 addpath(kapalin_path)
 savepath;
