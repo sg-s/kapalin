@@ -22,7 +22,7 @@ for i = 1:length(allfiles)
 		 env_names{end+1} = allfiles(i).name(5:end-2);
 	end
 
-	if nargout == 2 && strcmp(name,allfiles(i).name(5:end-2))
+	if nargout == 2 && strcmp(current_env,allfiles(i).name(5:end-2))
 		 varargout{2} = allfiles(i).name(5:end-2);
 	end
 

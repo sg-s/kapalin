@@ -25,9 +25,6 @@ assert(e==0,'Error reading token')
 
 assert(exist([fileparts(which(mfilename)) filesep 'config.json'],'file') == 2,'config.json not found. Create this file in your kapalin root folder.')
 
-p = jsondecode(fileread([fileparts(which(mfilename)) filesep 'config.json']));
-options.github_release_path = p.github_release_path;
-clear p
 
 % check if github-release is on path
 [e,o] = system('which github-release');
@@ -39,18 +36,23 @@ if e == 1
 end
 
 
+
 desc = ['"Click on the file named ' options.github_binary{1} ' to download a MATLAB toolbox. Drag that file onto your MATLAB workspace to install. This release has been generated using kapalin, an automated testing framework in MATLAB."'];
 
 t = datevec(today);
-version_name = ['version ' mat2str(t(1)-2000) '.' mat2str(t(2)) '.' mat2str(3)];
+version_name = ['v' mat2str(t(1)-2000) '.' mat2str(t(2)) '.' mat2str(t(3))];
 
 % create a release 
-[e,o]=system(['github-release release --user ' options.github_user_name ' --repo ' options.github_repo ' --tag ' datestr(today) ' --name ' version_name ' -s ' github_token ' --description ' desc]);
+[e,o]=system(['github-release release --user ' options.github_user_name ' --repo ' options.github_repo ' --tag ' version_name ' --name ' version_name ' -s ' github_token ' --description ' desc]);
+assert(e==0,['Upload failed with error: ' o])
 
 % upload the binary 
-[e,o]=system(['github-release upload --user ' options.github_user_name ' --repo ' options.github_repo ' --tag ' datestr(today) ' --name ' options.github_binary{1} ' -s ' github_token ' --file ' options.github_binary{1}]);
+[e,o]=system(['github-release upload --user ' options.github_user_name ' --repo ' options.github_repo ' --tag ' version_name ' --name ' options.github_binary{1} ' -s ' github_token ' --file ' options.github_binary{1}]);
 
+assert(e==0,['Upload failed with error: ' o])
 
 % amend the "latest" to point to this binary 
 [e,o]=system(['github-release upload --user ' options.github_user_name ' --repo ' options.github_repo ' --tag "latest" --name ' options.github_binary{1} ' -s ' github_token ' --file ' options.github_binary{1} ' -R']);
 
+
+assert(e==0,['Upload failed with error: ' o])
