@@ -25,19 +25,32 @@ assert(e==0,'Error reading token')
 
 assert(exist([fileparts(which(mfilename)) filesep 'config.json'],'file') == 2,'config.json not found. Create this file in your kapalin root folder.')
 
+options2 = jsondecode(fileread('config.json'));
 
 % check if github-release is on path
 [e,o] = system('which github-release');
 if e == 1
 	p = strsplit(getenv('PATH'),':');
-	p = [p options.github_release_path];
+	p = [p options2.github_release_path];
 	p = strjoin(p,':');
 	setenv('PATH',p)
 end
 
 
 
-desc = ['"Click on the file named ' options.github_binary{1} ' to download a MATLAB toolbox. Drag that file onto your MATLAB workspace to install. This release has been generated using kapalin, an automated testing framework in MATLAB."'];
+desc = ['"Click on the file named ' options.github_binary{1} ' to download a MATLAB toolbox. Drag that file onto your MATLAB workspace to install.  Recent changes include:  '];
+
+[e,o] = system('git log --oneline >> log.txt');
+if e == 0
+	txt = strsplit(fileread('log.txt'),'\n');
+	for i = 1:5
+		desc = [desc '  ' txt{i}];
+	end
+end
+desc = [desc '"'];
+delete('log.txt')
+
+
 
 t = datevec(today);
 version_name = ['v' mat2str(t(1)-2000) '.' mat2str(t(2)) '.' mat2str(t(3))];
