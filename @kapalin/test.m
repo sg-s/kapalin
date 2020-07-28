@@ -52,7 +52,7 @@ assert(~ispc,'kapalin.test() cannot run on Windows')
 
 
 % configure what to do if something goes wrong
-finishup = onCleanup(@() myCleanupFun(t, original_dir, original_env));
+finishup = onCleanup(@() myCleanupFun(t, original_dir, original_env, repo_dir));
 
 
 prj_name = dir([repo_dir filesep '*.prj']);
@@ -60,7 +60,7 @@ assert(length(prj_name) == 1, 'Could not determine project name')
 
 
 % modify the prj file to reflect today's date
-prj_text = fileread(prj_name.name);
+prj_text = fileread(fullfile(prj_name.folder,prj_name.name));
 old_str = prj_text(strfind(prj_text,'<param.version>'):strfind(prj_text,'</param.version>'));
 N = datevec(now);
 N = [mat2str(N(1)-2000) '.' mat2str(N(2)) '.' mat2str(N(3))];
@@ -140,6 +140,17 @@ for i = 1:length(k_options.deps)
 	assert(e == 0,'Error checking out master')
 end
 
+
+
+
+disp('[kapalin] Copying external code to be co-packaged...')
+
+for i = 1:length(k_options.external_code)
+	[~,fname,ext]=fileparts(k_options.external_code{i});
+	copyfile(k_options.external_code{i},fullfile(repo_dir,[fname,ext]))
+end
+
+
 disp('[kapalin::testing] Making the binary...')
 cd(repo_dir)
 
@@ -150,6 +161,11 @@ toolbox_name = strrep(prj_name.name,'prj','mltbx');
 
 disp('[kapalin] Making toolbox in ~/.kapalin/')
 matlab.addons.toolbox.packageToolbox(prj_name.name,[home_dir '/.kapalin/' toolbox_name])
+
+
+
+disp('[kapain] Restoring repo to original state...')
+system('git clean -f -d')
 
 
 disp('[kapalin::testing] Switching to a new environment.')
@@ -169,7 +185,7 @@ eval(['[passed, total] = ' t.Name '.run_all_tests;'])
 
 if passed < total
 	disp('Some tests failed; aborting.')
-	myCleanupFun(t, original_dir, original_env)
+	myCleanupFun(t, original_dir, original_env, repo_dir)
 	return
 
 end
@@ -217,15 +233,19 @@ end
 
 
 disp('[kapalin::testing] All done. Returning to original state.')
-myCleanupFun(t, original_dir, original_env)
+myCleanupFun(t, original_dir, original_env, repo_dir)
 
 
 end
 
 
 		
-function myCleanupFun(toolbox_name, original_dir, original_env)
+function myCleanupFun(toolbox_name, original_dir, original_env, repo_dir)
 	disp('Cleaning up...')
+
+	cd(repo_dir)
+	system('git clean -f -d')
+
 
 	if ~isempty(toolbox_name)
 		matlab.addons.toolbox.uninstallToolbox(toolbox_name);
