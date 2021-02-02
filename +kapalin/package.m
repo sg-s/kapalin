@@ -1,10 +1,14 @@
-function package(repo_dir)
+function package(options)
+
+arguments
+	options struct
+end	
 
 
 original_dir = pwd;
+project_name = options.name;
 
 
-[~,project_name]=fileparts(repo_dir);
 temp_folder = ['~/.kapalin/' project_name]; 
 
 prj_name = dir([temp_folder filesep '*.prj']);
@@ -20,9 +24,11 @@ N = [mat2str(N(1)-2000) '.' mat2str(N(2)) '.' mat2str(N(3))];
 new_str = ['<param.version>' N '<'];
 prj_text = strrep(prj_text,old_str,new_str);
 
+delete([prj_name.folder filesep prj_name.name])
+
 f = fopen([prj_name.folder filesep prj_name.name],'w');
 fprintf(f,prj_text);
-fclose(f)
+fclose(f);
 
 
 
@@ -39,8 +45,8 @@ cd(prj_name.folder)
 
 matlab.addons.toolbox.packageToolbox(prj_name.name,[home_dir '/.kapalin/' toolbox_name])
 
-% copy the package back to the repo_dir
-copyfile([home_dir '/.kapalin/' toolbox_name],[repo_dir filesep toolbox_name])
+% copy the package back to the options.repo_dir
+copyfile([home_dir '/.kapalin/' toolbox_name],[options.repo_dir filesep toolbox_name])
 
 
 cd(original_dir)

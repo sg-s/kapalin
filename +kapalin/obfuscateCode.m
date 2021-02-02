@@ -1,19 +1,19 @@
 % obfuscate code
 % for pedagogical or other purposes
 
-function obfuscateCode(repo_dir)
+function obfuscateCode(options)
 
 arguments
-	repo_dir char = pwd
+	options struct
 end	
 
 
-[~,project_name]=fileparts(repo_dir);
+project_name = options.name;
 
 
 % copy the entire directory to a new place
 temp_folder = ['~/.kapalin/' project_name]; 
-copyfile(repo_dir,temp_folder);
+copyfile(options.repo_dir,temp_folder);
 
 % obfuscate all code inplace
 pcode(temp_folder,'-inplace')
