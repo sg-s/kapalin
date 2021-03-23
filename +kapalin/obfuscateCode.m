@@ -8,12 +8,17 @@ arguments
 end	
 
 
+if ~options.obfuscate
+	return
+end
+
+disp('[kapalin] Obfuscating code...')
+
+
 project_name = options.name;
 
 
-% copy the entire directory to a new place
 temp_folder = ['~/.kapalin/' project_name]; 
-copyfile(options.repo_dir,temp_folder);
 
 % obfuscate all code inplace
 pcode(temp_folder,'-inplace')

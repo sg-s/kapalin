@@ -1,14 +1,17 @@
 % makes a new project in ~/.kapalin
 % nukes old files and folders if they are there
 
-function new(name)
+function new(options)
 
 arguments
-	name char 
+	options struct 
 end
 
+
+disp('[kapalin] Making new directory in ~/.kapalin...')
+
 % nuke old
-dir_name = ['~/.kapalin/' name];
+dir_name = ['~/.kapalin/' options.name];
 
 if exist(dir_name,'file') == 7
 	rmdir(dir_name,'s')
