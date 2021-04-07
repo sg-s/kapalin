@@ -13,7 +13,11 @@ options.repo_dir = pwd;
 
 [e,o] = system('git rev-parse HEAD');
 
-load([options.repo_dir filesep 'last_build.kapalin'],'-mat')
+try
+	load([options.repo_dir filesep 'last_build.kapalin'],'-mat')
+catch
+	last_build = 'never';
+end
 
 if strcmp(o,last_build)
 	% hashes match, don't build or test

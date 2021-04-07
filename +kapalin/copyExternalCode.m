@@ -7,6 +7,10 @@ arguments
 	options struct
 end	
 
+if ~isfield(options,'external_code')
+	return
+end
+
 disp('[kapalin] Copying external code:')
 
 
