@@ -17,9 +17,6 @@ ok = false;
 repo_dir = options.repo_dir;
 
 
-
-original_dir = pwd;
-
 % verify that we are currently in an environment 
 assert(~isempty(env.list),'You need to first save your current environment (use env.save(''something'')')
 [~,options.original_env] = env.list;
